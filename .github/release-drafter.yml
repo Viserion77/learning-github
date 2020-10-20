@@ -1,0 +1,42 @@
+name-template: 'v$NEXT_PATCH_VERSION'
+tag-template: 'v$NEXT_PATCH_VERSION'
+categories:
+  - title: ':rocket: Features'
+    labels:
+      - 'feature'
+      - 'enhancement'
+      - 'feat'
+  - title: ':bug: Bug Fixes'
+    labels:
+      - 'fix'
+      - 'bugfix'
+      - 'bug'
+  - title: ':wrench: Maintenance'
+    labels: 
+      - 'chore'
+      - 'ci'
+      - 'build'
+      - 'perf'
+      - 'improvement'
+      - 'style'
+      - 'test'
+  - title: ':hammer_and_wrench: Refactor'
+    labels: 
+      - 'refact'
+      - 'refactor'
+  - title: ':notebook: Docs'
+    label: 'docs'
+  - title: ':robot: Automation'
+    label: 'automation'
+change-template: '- $TITLE (#$NUMBER) @$AUTHOR'
+exclude-labels:
+  - 'gitflow-merge'
+branches: [master, stage, develop]
+template: |
+  ## Changes
+
+  $CHANGES
+
+  ## :man_technologist: :woman_technologist: Contributors
+
+  $CONTRIBUTORS
