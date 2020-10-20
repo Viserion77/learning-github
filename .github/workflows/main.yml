@@ -5,23 +5,58 @@ on:
 name: Create Release
 
 jobs:
-  build:
-    name: Create Release
+  generateReleaseDraft:
+    name: Generate Release Draft 
+    if: "!contains(github.event.head_commit.message, '[skip-ci]')"
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Commit Checkout
         uses: actions/checkout@v2
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+      
+      - name: Setup node
+        uses: actions/setup-node@v1
         with:
-          tag_name: ${{ github.ref }}
-          release_name: V${{ github.ref }}
-          body: |
-            Changes in this Release
-            - First Change
-            - Second Change
-          draft: false
-          prerelease: false
+          node-version: '12.x'
+
+      - name: Extract branch name
+        id: extract_branch
+        run: echo "::set-output name=branch::$(echo ${GITHUB_REF#refs/heads/})"
+
+      # TODO: identificar se a alteração é major, minor ou patch
+      - name: Get version bump template
+        id: generate_release_tag
+        run: node .github/scripts/get-release-tag-template.js ${GITHUB_REF#refs/heads/} ${{ secrets.GITHUB_TOKEN }}
+
+      # ATENÇÃO! trocar quando lançar a release 5.8.0
+      - uses: sergioflores-j/release-drafter@master
+        name: Generate release draft
+        id: release_draft
+        with:
+          publish: false
+          prerelease: ${{ steps.extract_branch.outputs.branch == 'stage' }}
+          changelog-ignore-prerelease: ${{ steps.extract_branch.outputs.branch != 'stage' }}
+          tag: ${{ steps.generate_release_tag.outputs.version }}
+          name: ${{ steps.generate_release_tag.outputs.version }}
+          version: ${{ steps.generate_release_tag.outputs.version }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Save release drafter output to file
+        run: node .github/scripts/get-release-drafter-response.js "${{ steps.release_draft.outputs.id }}" "${{ steps.release_draft.outputs.html_url }}" "${{ steps.release_draft.outputs.upload_url }}" "${{ steps.release_draft.outputs.body }}"
+
+      - name: Get release draft tag_name
+        id: check_version
+        run: node .github/scripts/get-release-tag.js ${{ steps.release_draft.outputs.id }} ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Save release output to a file
+        run: node .github/scripts/merge-json.js .github/release_draft.txt '{"version":"${{ steps.check_version.outputs.tag_name }}"}'
+
+      # TODO: Fazer o release-draft retornar a versão
+      # - name: Save release output to a file
+      #   run: echo '${{ toJson(steps.release_draft.outputs) }}' > .github/release_draft.txt
+
+      - name: Upload release artifact
+        uses: actions/upload-artifact@v1
+        with:
+          name: release_artifact
+          path: .github/release_draft.txt
